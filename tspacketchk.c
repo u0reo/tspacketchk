@@ -78,7 +78,7 @@ void packetchk(const char *path)
 
     /* 同期byte のチェック */
     if ( *rb.curr != 0x47 ) {
-      if (verbose(&vd,currPCR-startPCR , pcc, "syncbyte lost", 0 )== false ) {
+      if (verbose(&vd,elapsedPCR(startPCR, currPCR) , pcc, "syncbyte lost", 0 )== false ) {
         syncbyte_lost++;
       }
       p = resyncRB( &rb );
@@ -104,7 +104,7 @@ void packetchk(const char *path)
     lcc = stat[pid].last_continuity_counter;
 
     if ( header.transport_error_indicator != 0) { // 伝送エラー
-      if ( verbose( &vd, currPCR - startPCR, pcc, "error", pid) == false ) {
+      if ( verbose( &vd, elapsedPCR(startPCR, currPCR), pcc, "error", pid) == false ) {
         stat[pid].error += 1;
       }
     } else if( (lcc >= 0) && (adapt.discontinuity_counter == 0) ){
@@ -115,7 +115,7 @@ void packetchk(const char *path)
         // no payload : continuity_counter should not increment
         if(lcc != header.continuity_counter  ){
           sprintf( text, "drop (no payload: %d != %d)", lcc, header.continuity_counter );
-          if ( verbose( &vd, currPCR - startPCR , pcc, text, pid) == false ) {
+          if ( verbose( &vd, elapsedPCR(startPCR, currPCR) , pcc, text, pid) == false ) {
             stat[pid].drop += 1;
           }
         }
@@ -124,7 +124,7 @@ void packetchk(const char *path)
         if(memcmp(stat[pid].last_packet, rb.curr, 188) != 0){ // 中身が違う
           // non-duplicate packet
           sprintf( text, "drop (%d != %d)", lcc+1, header.continuity_counter );
-          if ( verbose( &vd, currPCR - startPCR , pcc, text, pid) == false ) {
+          if ( verbose( &vd, elapsedPCR(startPCR, currPCR) , pcc, text, pid) == false ) {
             stat[pid].drop += 1;
           }
         } else {                // 中身が同じ -> 再送は 1回まで
@@ -132,7 +132,7 @@ void packetchk(const char *path)
           if(stat[pid].duplicate_count > 1){
             // duplicate packet count exceeds limit (two)
             sprintf( text, "drop (Abnormal duplicate count)");
-            if ( verbose( &vd, currPCR - startPCR , pcc, text, pid) == false ) {
+            if ( verbose( &vd, elapsedPCR(startPCR, currPCR) , pcc, text, pid) == false ) {
               stat[pid].drop += 1;
             }
           }
@@ -142,7 +142,7 @@ void packetchk(const char *path)
         m = (lcc + 1) & 0x0f;
         if(m != header.continuity_counter){
           sprintf( text, "drop (%d != %d)", m,header.continuity_counter );
-          if ( verbose( &vd, currPCR - startPCR, pcc, text, pid) == false ) {
+          if ( verbose( &vd, elapsedPCR(startPCR, currPCR), pcc, text, pid) == false ) {
             stat[pid].drop += 1;
           }
         }
@@ -247,6 +247,15 @@ INT64 durationCalc( INT64 start, INT64 end )
   } else {
     return ( 0x1ffffffff - start ) + end ;
   }
+}
+
+/*
+ * 開始からの経過 PCR (Wrap-around を考慮)
+ */
+INT64 elapsedPCR( INT64 start, INT64 end )
+{
+  if ( start == 0 || end == 0 ) return 0 ;
+  return durationCalc( start, end ) ;
 }
 
 

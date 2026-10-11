@@ -127,3 +127,4 @@ unsigned char *resyncRB(ReadBuf *rb );
 void    packetchk(const char *path);
 bool    verbose( VERBOSE_DATA *vd, INT64 pcr, int pcc, char *type, int pid );
 INT64   durationCalc( INT64 start, INT64 end );
+INT64   elapsedPCR( INT64 start, INT64 end );
